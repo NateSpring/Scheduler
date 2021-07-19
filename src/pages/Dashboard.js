@@ -44,7 +44,7 @@ function Dashboard() {
           return (
             <div
               key={route.id}
-              className="grid gap-6 mb-8 md:grid-cols-2 shadow-2xl bg-gray-50"
+              className="grid gap-6 mb-8 md:grid-cols-2 shadow-2xl bg-white rounded-xl"
             >
               <ChartCard title={route.name}>
                 <Pie
@@ -298,7 +298,15 @@ function Dashboard() {
               </ChartCard>
               {/* DEFECT LOG */}
               <ChartCard title="Daily Defect Log">
-                <p className="text-sm mb-6">Defect count for today.</p>
+                <div className="flex flex-row text-xl mb-6">
+                  <p>Defect count: </p>
+                  <p
+                    className="ml-2 px-2 text-3xl font-bold text-white
+                    bg-orange-500 rounded-lg"
+                  >
+                    7
+                  </p>
+                </div>
                 <Bar
                   data={defectLogData(
                     defectLog.filter((defect) => {
@@ -345,7 +353,8 @@ function Dashboard() {
                     {hopper.map((parts, i) => {
                       if (parts.current_dept === route.id) {
                         return (
-                          <TableRow key={i}
+                          <TableRow
+                            key={i}
                             className={`bg-${parts.takt_status}-500 text-gray-100 font-semibold text-lg`}
                           >
                             <TableCell>{parts.current_cell}</TableCell>

@@ -37,7 +37,7 @@ export const ScanModalTimer = ({ taktTimerTime }) => {
 
   const scan = async (buildOrderId) => {
     const movingOrder = await axios
-      .post("http://localhost:5000/scan", {
+      .post("http://192.168.55.26:5000/scan", {
         qrCode: buildOrderId,
         taktTime: taktTimerTime.time,
       })

@@ -41,42 +41,42 @@ function Header() {
   const whatDept = (currentDept) => {
     let decodedObj = {};
     let cd = currentDept;
-    if (cd == -1) {
+    if (cd == 0) {
       decodedObj = {
         decoded_dept: "NESTING",
         decoded_url: "/app/nesting",
       };
-    } else if (cd == 0) {
+    } else if (cd == 1) {
       decodedObj = {
         decoded_dept: "LASER",
         decoded_url: "/app/laser",
       };
-    } else if (cd == 1) {
+    } else if (cd == 2) {
       decodedObj = {
         decoded_dept: "PRESSBRAKE",
         decoded_url: "/app/pressbrake",
       };
-    } else if (cd == 2) {
+    } else if (cd == 3) {
       decodedObj = {
         decoded_dept: "MACHINE SHOP",
         decoded_url: "/app/machineshop",
       };
-    } else if (cd == 3) {
+    } else if (cd == 4) {
       decodedObj = {
         decoded_dept: "TUBE FAB",
         decoded_url: "/app/tubefab",
       };
-    } else if (cd == 4) {
+    } else if (cd == 5) {
       decodedObj = {
         decoded_dept: "WELDING",
         decoded_url: "/app/welding",
       };
-    } else if (cd == 5) {
+    } else if (cd == 6) {
       decodedObj = {
         decoded_dept: "POWDER",
         decoded_url: "/app/powdercoating",
       };
-    } else if (cd == 6) {
+    } else if (cd == 7) {
       decodedObj = {
         decoded_dept: "SHIPPING",
         decoded_url: "/app/shipping",

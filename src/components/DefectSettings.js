@@ -42,18 +42,21 @@ export const DefectSettings = ({ build }) => {
   };
   const reportDefect = async () => {
     console.log(defectInfo);
-    let createDefect = await axios.post("http://localhost:5000/create_defect", {
-      id: build.id,
-      sales_order: build.sales_order,
-      part_number: build.part_number,
-      defect_dept: defectInfo.defect_dept,
-      from_dept: defectInfo.from_dept,
-      from_cell: defectInfo.from_cell,
-      defect_category: defectInfo.defect_category,
-      defect_description: defectInfo.defect_description,
-      scrapped: defectInfo.scrapped,
-      quantity: defectInfo.quantity,
-    });
+    let createDefect = await axios.post(
+      "http://192.168.55.26:5000/create_defect",
+      {
+        id: build.id,
+        sales_order: build.sales_order,
+        part_number: build.part_number,
+        defect_dept: defectInfo.defect_dept,
+        from_dept: defectInfo.from_dept,
+        from_cell: defectInfo.from_cell,
+        defect_category: defectInfo.defect_category,
+        defect_description: defectInfo.defect_description,
+        scrapped: defectInfo.scrapped,
+        quantity: defectInfo.quantity,
+      }
+    );
     if (createDefect.status == 200) {
       toast.warning("🐜 Defect Reported!");
       setDefectModalOpen(false);

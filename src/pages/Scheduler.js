@@ -113,7 +113,7 @@ function Scheduler() {
     if (emptyFields == false) {
       const createBuildOrder = async () => {
         const response = await axios
-          .post("http://localhost:5000/create_build", {
+          .post("http://192.168.55.26:5000/create_build", {
             part: order.part,
             quantity: order.quantity,
             salesNumber: order.salesNumber,
@@ -154,7 +154,7 @@ function Scheduler() {
         });
 
         axios
-          .post("http://localhost:5000/scan", {
+          .post("http://192.168.55.26:5000/scan", {
             qrCode: buildOrderId,
             current_dept: item.current_dept,
             sales_order: item.sales_order,
@@ -452,16 +452,16 @@ function Scheduler() {
                               }}
                               size="2x"
                               icon={faRocket}
-                              className={`
-                              ${
-                                readyForLaunch && "text-white animate-wiggle"
-                              } p-1 transform -rotate-45 hover:scale-150`}
-                              onMouseEnter={() => {
-                                setReadyForLaunch(true);
-                              }}
-                              onMouseLeave={() => {
-                                setReadyForLaunch(false);
-                              }}
+                              // className={`
+                              // ${
+                              //   readyForLaunch && "text-white animate-wiggle"
+                              // } p-1 transform -rotate-45 hover:scale-150`}
+                              // onMouseEnter={() => {
+                              //   setReadyForLaunch(true);
+                              // }}
+                              // onMouseLeave={() => {
+                              //   setReadyForLaunch(false);
+                              // }}
                             />
                           </TableCell>
                         </TableRow>
@@ -474,19 +474,22 @@ function Scheduler() {
           </TableContainer>
         </div>
 
-        <div className="flex flex-col w-full xl:w-1/2 gap-2 bg-gray-100 m-1">
+        <div className="flex flex-col w-full xl:w-1/2 gap-2 bg-gray-100 p-2 m-1">
           {routes.map((route) => {
             if (route.name == "Dashboard" || route.name == "Scheduler") {
             } else {
               return (
-                <div key={route.id} className="bg-gray-300 p-2 rounded-lg">
+                <div key={route.id} className="bg-gray-50 p-2 rounded-lg">
                   {/* <p className="p-2 font-semibold text-2xl">
                     {route.name} Capacity
                   </p> */}
 
-                  <div className="rounded-xl bg-gray-50 w-full">
+                  <div className="flex flex-row rounded-xl bg-gray-50 ">
+                    <div className="text-lg font-bold p-1 w-1/4">
+                      {route.name}
+                    </div>
                     <div
-                      className={`rounded-xl shadow-lg font-bold text-2xl p-0.5 text-white text-center ${progressLength(
+                      className={` w-3/4 rounded-xl shadow-lg font-bold text-2xl p-0.5 text-white text-center ${progressLength(
                         (
                           (hopper.filter((item) => {
                             return item.current_dept === route.id;
@@ -496,12 +499,13 @@ function Scheduler() {
                         ).toFixed(2)
                       )} pr-1 rounded`}
                     >
-                      <div className="text-lg font-bold p-2">{route.name}</div>
-                      {(hopper.filter((item) => {
-                        return item.current_dept === route.id;
-                      }).length /
-                        route.cap) *
-                        100}
+                      {(
+                        (hopper.filter((item) => {
+                          return item.current_dept === route.id;
+                        }).length /
+                          route.cap) *
+                        100
+                      ).toFixed()}
                       %
                     </div>
                   </div>

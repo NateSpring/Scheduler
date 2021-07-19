@@ -31,7 +31,7 @@ function FinalAssembly() {
   ]);
   const changeCell = async (id, cell) => {
     const changeCell = await axios.get(
-      `http://localhost:5000/cell?id=${id}&current_cell=${cell}`
+      `http://192.168.55.26:5000/cell?id=${id}&current_cell=${cell}`
     );
     // setNewCell({ pid: id, ccell: cell });
     sendToCell(id, cell);
@@ -41,7 +41,7 @@ function FinalAssembly() {
   const [operatorData, setOperatorData] = useState([]);
   // Initialize Operator Data:
   useEffect(async () => {
-    let cellOps = await axios.get("http://localhost:5000/get_operator");
+    let cellOps = await axios.get("http://192.168.55.26:5000/get_operator");
     setOperatorData(cellOps.data);
   }, []);
 
@@ -58,7 +58,7 @@ function FinalAssembly() {
   };
   // Save Operator Data:
   const saveOperator = () => {
-    axios.post("http://localhost:5000/save_operator", {
+    axios.post("http://192.168.55.26:5000/save_operator", {
       cell: operator.cell,
       operator: operator.operator,
     });

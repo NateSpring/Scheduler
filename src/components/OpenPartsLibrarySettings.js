@@ -31,7 +31,7 @@ export const OpenPartsLibrarySettings = ({ build }) => {
 
   const openPLFolder = async () => {
     let open = await axios.get(
-      `http://localhost:5000/localfolder?part=${build.part_number}&desc=${build.part_data[1]}`
+      `http://192.168.55.26:5000/localfolder?part=${build.part_number}&desc=${build.part_data[1]}`
     );
     if (open.status == 200) {
       toast.success(ToastMsg(build.id, open.data));

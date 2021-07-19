@@ -2,7 +2,7 @@ import React, { useState, useEffect, createContext } from "react";
 import axios from "axios";
 import socketIOClient from "socket.io-client";
 
-const socket = socketIOClient("http://localhost:5000");
+const socket = socketIOClient("http://192.168.55.26:5000");
 
 const HopperContext = createContext();
 
@@ -78,14 +78,14 @@ const HopperProvider = (props) => {
     const getHopper = async () => {
       let hopParse = [];
       let currentHopper = [];
-      const hopRes = await axios.get(`http://localhost:5000/hopper`);
+      const hopRes = await axios.get(`http://192.168.55.26:5000/hopper`);
       const completedTakt = await axios.get(
-        `http://localhost:5000/completed_takt_time`
+        `http://192.168.55.26:5000/completed_takt_time`
       );
-      const defects = await axios.get(`http://localhost:5000/defect_log`);
+      const defects = await axios.get(`http://192.168.55.26:5000/defect_log`);
       hopRes.data.map((hop) => {
         hop.part_data = JSON.parse(hop.part_data);
-        // Map takt times from here
+        // Map takt times from here 26a
         let taktTime = hop.part_data;
         hop.takt_data = {
           Laser: parseFloat(taktTime[2]),
@@ -106,7 +106,8 @@ const HopperProvider = (props) => {
           FinalAssembly: parseFloat(taktTime[62]) + parseFloat(taktTime[63]),
           //falsy for packaging
           Packaging: 10.1,
-          Shipping: {
+          Shipping: parseFloat(taktTime[66]),
+          ShippingFull: {
             rbo_b2: parseFloat(taktTime[66]),
             itd_b2: parseFloat(taktTime[67]),
             ffp_b2: parseFloat(taktTime[68]),
@@ -137,7 +138,7 @@ const HopperProvider = (props) => {
   // Initialize Operator Data:
   useEffect(() => {
     const getOperators = async () => {
-      let cellOps = await axios.get("http://localhost:5000/get_operator");
+      let cellOps = await axios.get("http://192.168.55.26:5000/get_operator");
       setOperatorData(cellOps.data);
     };
     getOperators();
@@ -146,7 +147,7 @@ const HopperProvider = (props) => {
   useEffect(() => {
     const getCompleteTakt = async () => {
       let ttd_data = await axios.get(
-        "http://localhost:5000/completed_takt_time"
+        "http://192.168.55.26:5000/completed_takt_time"
       );
       let ttd = ttd_data.data;
       setCompletedTakts(ttd);

@@ -32,7 +32,7 @@ function PressBrake() {
 
   const changeCell = async (id, cell) => {
     const changeCell = await axios.get(
-      `http://localhost:5000/cell?id=${id}&current_cell=${cell}`
+      `http://192.168.55.26:5000/cell?id=${id}&current_cell=${cell}`
     );
     sendToCell(id, cell);
   };
@@ -49,7 +49,7 @@ function PressBrake() {
   };
   // Save Operator Data:
   const saveOperator = () => {
-    axios.post("http://localhost:5000/save_operator", {
+    axios.post("http://192.168.55.26:5000/save_operator", {
       cell: operator.cell,
       operator: operator.operator,
     });

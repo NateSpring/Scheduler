@@ -86,7 +86,7 @@ export const ScanModal = ({ scanDept }) => {
   const scan = async (buildOrderId) => {
     // Scan in/out build order
     // const getCurrentDept = await axios
-    //   .post("http://localhost:5000/buildorder", { id: buildOrderId })
+    //   .post("http://192.168.55.26:5000/buildorder", { id: buildOrderId })
     //   .then(async (res) => {
     //     let curDept = res.data[0].current_dept;
     //     if (curDept === scanDept) {
@@ -104,7 +104,7 @@ export const ScanModal = ({ scanDept }) => {
     });
 
     const movingOrder = await axios
-      .post("http://localhost:5000/scan", {
+      .post("http://192.168.55.26:5000/scan", {
         qrCode: buildOrderId,
         scanDept: scanDept,
       })
@@ -114,7 +114,7 @@ export const ScanModal = ({ scanDept }) => {
           if (hop.id === qrOutput) {
             await axios
               .get(
-                `/localfolder?part=${hop.part_number}&desc=${hop.part_data[1]}`
+                `/localfolder?part=${hop.part_number}&desc=${hop.part_data[1]}&dept=${hop.current_dept}`
                 // THIS WILL OPEN THE SPECIFIC PDF->>>>>
                 // NEED FOLDER NAME FORMATTING -- REMOVE SPACES FOR CONSISTENCY
                 // &dept=${whatDept(hop.current_dept)}`
@@ -136,7 +136,8 @@ export const ScanModal = ({ scanDept }) => {
                 } else if (hop.current_dept === 0) {
                   /* Omit this if you want the nesting scan window to stay open until you're actually done.
                       Super handy for bulk scanning build orders. */
-                  setScanModalOpen(false);
+                  // setScanModalOpen(false);
+                  noTimer(hop);
                 } else {
                   taktTimer(hop);
                 }
@@ -206,7 +207,7 @@ export const ScanModal = ({ scanDept }) => {
         });
 
         axios
-          .post("http://localhost:5000/scan", {
+          .post("http://192.168.55.26:5000/scan", {
             qrCode: buildOrderId,
             taktTime:
               timer.ms && startTime.ms ? msToHMS(startTime.ms - timer.ms) : 0,
@@ -237,7 +238,7 @@ export const ScanModal = ({ scanDept }) => {
     if (timer) {
       const changeTaktStatus = async () => {
         const changeStatus = await axios
-          .post(`http://localhost:5000/taktstatus`, {
+          .post(`http://192.168.55.26:5000/taktstatus`, {
             id: timer.uid,
             takt_status: timerStatus,
           })
@@ -490,7 +491,7 @@ export const ScanModal = ({ scanDept }) => {
                 className="bg-red-500 text-xl p-4 text-gray-100 font-bold rounded m-0.5 w-1/2"
                 onClick={() => {
                   axios
-                    .post("http://localhost:5000/timer_reset", {
+                    .post("http://192.168.55.26:5000/timer_reset", {
                       id: isModalOpen.mid,
                     })
                     .then((res) => {

@@ -32,7 +32,7 @@ const io = new socketIo.Server(server, {
 const config = {
   host: "127.0.0.1",
   user: "root",
-  database: "dept_status",
+  database: "scheduler",
 };
 const con = mysql.createPool(config);
 
@@ -355,18 +355,22 @@ app.get("/get_part_description", (req, res) => {
 
 app.post("/create_defect", (req, res) => {
   // Create Defect Log
-  con.query(
-    `INSERT INTO defect_log (id, sales_order, part_number, quantity, defect_dept, from_dept, from_cell, defect_category, defect_description) VALUES ('${req.body.id}', ${req.body.sales_order},'${req.body.part_number}', ${req.body.quantity}, '${req.body.defect_dept}','${req.body.from_dept}','${req.body.from_cell}','${req.body.defect_category}','${req.body.defect_description}')`,
-    (error, result) => {
-      if (!error) {
-        res.sendStatus(200);
-        io.sockets.emit("dept status change", {
-          id: req.body.qrCode,
-          message: `Defect Reported ${req.body.qrCode}`,
-        });
-      }
+  let defect_query;
+  // if (req.body.scrapped == True) {
+  //   console.log("she scrappy");
+  //   defect_query = `INSERT INTO defect_log (id, sales_order, part_number, quantity, defect_dept, from_dept, from_cell, defect_category, defect_description) VALUES ('${req.body.id}', ${req.body.sales_order},'${req.body.part_number}', ${req.body.quantity}, '0','${req.body.from_dept}','${req.body.from_cell}','${req.body.defect_category}','${req.body.defect_description}')`;
+  // } else {
+  defect_query = `INSERT INTO defect_log (id, sales_order, part_number, quantity, defect_dept, from_dept, from_cell, defect_category, defect_description) VALUES ('${req.body.id}', ${req.body.sales_order},'${req.body.part_number}', ${req.body.quantity}, '${req.body.defect_dept}','${req.body.from_dept}','${req.body.from_cell}','${req.body.defect_category}','${req.body.defect_description}')`;
+  // }
+  con.query(defect_query, (error, result) => {
+    if (!error) {
+      res.sendStatus(200);
+      io.sockets.emit("dept status change", {
+        id: req.body.qrCode,
+        message: `Defect Reported ${req.body.qrCode}`,
+      });
     }
-  );
+  });
   // Reroute build to origin defect dept.
   con.query(
     `UPDATE hopper SET current_dept=${req.body.defect_dept}, timer_start=0, current_cell='hopper', takt_status='orange' WHERE id='${req.body.id}'`,
@@ -411,9 +415,9 @@ app.get("/localflow", (req, res) => {
   let desc = req.query.desc;
   let partsLibrary = part + " " + desc;
   partsLibrary = partsLibrary.replace(/\s+/g, "-");
-  // let flowPdfPath = `\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}\\${part}-Build-Order-Card-Parts-Flow.pdf`;
+  // let flowPdfPath = `\\\\IG\\Inventive\\Parts-Library\\${partsLibrary}\\${part}-Build-Order-Card-Parts-Flow.pdf`;
   // EXAMPLE PATH
-  let flowPdfPath = `\\\\ig\\Inventive\\Parts-Library\\ITD1570-70-Inch-Under-Body-Tool-Box\\ITD1570-Build-Order-Card-Parts-Flow.pdf`;
+  let flowPdfPath = `\\\\IG\\Inventive\\Parts-Library\\ITD1570-70-Inch-Under-Body-Tool-Box\\ITD1570-Build-Order-Card-Parts-Flow.pdf`;
   pdf2html.text(flowPdfPath, (err, flowData) => {
     if (err) {
       console.log("Conversion error: ", err);
@@ -439,7 +443,7 @@ app.get("/localflow", (req, res) => {
 
 // Test PDF opening.
 app.get("/testlcl", (req, res) => {
-  let pdfFilePath = `\\\\ig\\Inventive\\Parts-Library\\ITD1570-70-Inch-Under-Body-Tool-Box\\ITD1570-Build-Order-Card-Parts-Flow.pdf`;
+  let pdfFilePath = `\\\\IG\\Inventive\\Parts-Library\\ITD1570-70-Inch-Under-Body-Tool-Box\\ITD1570-Build-Order-Card-Parts-Flow.pdf`;
 
   //Return JSONified cut list.
   pdfPar.pdf2json(pdfFilePath, (error, pdf) => {
@@ -455,6 +459,27 @@ app.get("/testlcl", (req, res) => {
 app.get("/localfolder", (req, res) => {
   let part = req.query.part;
   let desc = req.query.desc;
+  let dept = req.query.dept;
+  const flow = {
+    0: "Nesting",
+    1: "Laser",
+    2: "PressBrake",
+    3: "TubeFab",
+    4: "TubeBender",
+    5: "Saw",
+    6: "Mill",
+    7: "Lathe",
+    8: "Welding",
+    9: "RobotWelding",
+    10: "PowderCoating",
+    11: "Hardware",
+    12: "FinalAssembly",
+    13: "Packaging",
+    14: "Shipping",
+  };
+  dept = flow[dept];
+  console.log(req.query.dept);
+
   // let dept = req.query.dept;
   let partsLibrary = part + " " + desc;
   partsLibrary = partsLibrary.replace(/\s+/g, "-");
@@ -462,8 +487,8 @@ app.get("/localfolder", (req, res) => {
   ///////////////// The legend of opening PDFS, need folder renames for this... lol
   // if (dept === "SHOP - Laser Cut List") {
   //   dept = dept + "\\" + part + " Laser Cut List.pdf";
-  //   let pdfFilePath = `\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}\\`;
-  //   // let pdfFilePath = `\\\\ig\\Inventive\\Parts-Library\\ITD4518-SP9-No-Controls\\SHOP - Laser Cut List\\ITD4518-Laser-Cut-List.pdf`;
+  //   let pdfFilePath = `\\\\IG\\Inventive\\Parts-Library\\${partsLibrary}\\`;
+  //   // let pdfFilePath = `\\\\IG\\Inventive\\Parts-Library\\ITD4518-SP9-No-Controls\\SHOP - Laser Cut List\\ITD4518-Laser-Cut-List.pdf`;
   //   //Return JSONified cut list.
   //   pdfPar.pdf2json(pdfFilePath, (error, pdf) => {
   //     if (error) {
@@ -477,7 +502,7 @@ app.get("/localfolder", (req, res) => {
   //   // Open cut list PDF.
   //   try {
   //     localfs.exec(
-  //       `start "" "\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}"`
+  //       `start "" "\\\\IG\\Inventive\\Parts-Library\\${partsLibrary}"`
   //     );
   //     console.log("Attempting to Open: " + partsLibrary);
   //   } catch (e) {
@@ -485,20 +510,30 @@ app.get("/localfolder", (req, res) => {
   //   }
   // } else {
   // Open procedure PDF.
-  if (req.query.part == "ITD0000") {
-    localfs.exec(`start "" "\\\\ig\\Inventive\\Parts-Library"`);
+  if (req.query.dept != 0) {
+    if (
+      part == "AP1" ||
+      part == "AP2" ||
+      part == "AP3" ||
+      part == "AP4" ||
+      part == "AP5"
+    ) {
+      localfs.exec(
+        `start "" "\\\\IG\\Inventive\\Parts-Library\\${partsLibrary}\\${desc}-${dept}.jpg"`
+      );
+    }
   }
+
   try {
     localfs.exec(
-      `start "" "\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}"`
+      `start "" "\\\\IG\\Inventive\\Parts-Library\\${partsLibrary}"`
     );
     console.log("Opening local procedures: " + partsLibrary);
     res.send("Opening Folder!");
   } catch (e) {
-    localfs.exec(`start "" "\\\\ig\\Inventive\\Parts-Library"`);
+    localfs.exec(`start "" "\\\\IG\\Inventive\\Parts-Library"`);
     res.status(500).send({ message: "Error Opening Parts Library Folder" });
   }
-  // }
 });
 
 // Get entire build order from hopper
@@ -623,7 +658,7 @@ const syncGsheet = async () => {
   // Set timeout for how often data is refreshed.
   setTimeout(syncGsheet, 60 * 60 * 1000);
 };
-syncGsheet();
+// syncGsheet();
 
 /*
 TREE OF DEPRECATION:

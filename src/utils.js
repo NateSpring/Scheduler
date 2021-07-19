@@ -2,7 +2,7 @@ import socketIOClient from "socket.io-client";
 import { Badge } from "@windmill/react-ui";
 
 //Functions for emiting state through socket.io//
-const socket = socketIOClient("http://localhost:5000");
+const socket = socketIOClient("http://192.168.55.26:5000");
 // Date time function
 function getDateTime() {
   var date = new Date();
