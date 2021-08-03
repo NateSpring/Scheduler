@@ -30,19 +30,16 @@ export const OpenPartsLibrarySettings = ({ build }) => {
   );
 
   const openPLFolder = async () => {
-    let open = await axios.get(
-      `http://192.168.55.26:5000/localfolder?part=${build.part_number}&desc=${build.part_data[1]}`
-    );
-    if (open.status == 200) {
-      toast.success(ToastMsg(build.id, open.data));
+    if (window && window.process && window.process.type == "renderer") {
+      window.open(build.part_number, build.part_data[1]);
     } else {
-      toast.error(ToastErr(build.id, open.data));
+      console.log("Cannot open local folder from browser");
     }
   };
   return (
     <>
       <button
-        className="flex flex-row justify-center align-center items-center p-2 w-8/12 bg-gray-200 hover:bg-gray-300 shadow hover:shadow-inner rounded mb-2"
+        className="flex flex-row justify-center align-center items-center p-2 w-8/12 bg-gray-200 hover:bg-gray-300 shadow hover:shadow-inner rounded"
         onClick={openPLFolder}
       >
         <FontAwesomeIcon

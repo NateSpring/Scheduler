@@ -1,28 +1,107 @@
-export const piData = (items) => {
-  let onTime = 0;
-  let stopped = 0;
-  let waiting = 0;
+import { IoCartSharp, IoCartOutline } from "react-icons/io5";
+import moment from "moment";
 
-  items.map(
-    (item) => (
-      item.takt_status === "green" ? onTime++ : onTime,
-      item.takt_status === "red" ? stopped++ : stopped,
-      item.takt_status === "blue" ? waiting++ : waiting
-    )
-  );
-  if (onTime == 0 && stopped == 0 && waiting == 0) {
-    waiting = 1;
+const flow = {
+  0: "Nesting",
+  1: "Laser",
+  2: "PressBrake",
+  3: "TubeFab",
+  4: "TubeBender",
+  5: "Saw",
+  6: "Mill",
+  7: "Lathe",
+  8: "Welding",
+  9: "RobotWelding",
+  10: "PowderCoating",
+  11: "Hardware",
+  12: "FinalAssembly",
+  13: "Packaging",
+  14: "Shipping",
+};
+
+const timeFilter = (filter) => {
+  let filterStart, filterEnd;
+  if (filter == "today") {
+    filterStart = moment().format("YYYY-MM-DD");
+    filterEnd = moment().format("YYYY-MM-DD");
+  } else if (filter == "week") {
+    filterStart = moment().format("YYYY-MM-DD");
+    filterEnd = moment(filterStart)
+      .subtract(1, "weeks")
+      .startOf("isoWeek")
+      .format("YYYY-MM-DD");
+  } else {
+    filterStart = moment(filter[1]).format("YYYY-MM-DD");
+    filterEnd = moment(filter[0]).format("YYYY-MM-DD");
   }
+  return { filterStart, filterEnd };
+};
+
+// PI-CHART DATA
+export const piData = (filter, items, defects, completedTakts, deptIndex) => {
+  let dept = flow[deptIndex];
+  let onTime = 0;
+  let late = 0;
+  let completed = 0;
+  let defect = 0;
+  // console.log(completedTakts);
+  defects.map((d) => {
+    if (
+      moment(d.timestamp).format("YYYY-MM-DD") <=
+        timeFilter(filter).filterStart &&
+      moment(d.timestamp).format("YYYY-MM-DD") >= timeFilter(filter).filterEnd
+    ) {
+      defect++;
+    }
+  });
+
+  completedTakts.map((completedTakt) => {
+    if (completedTakt[dept] !== "0") {
+      if (
+        moment(completedTakt.timestamp).format("YYYY-MM-DD") <=
+          timeFilter(filter).filterStart &&
+        moment(completedTakt.timestamp).format("YYYY-MM-DD") >=
+          timeFilter(filter).filterEnd
+      ) {
+        completed++;
+
+        items.map((item) => {
+          if (item.id == completedTakt.id) {
+            if (completedTakt[dept] !== "0") {
+              let item_takt = item.takt_data[dept] * item.quantity;
+              let completed_takt = completedTakt[dept].split(":");
+              let completed_time =
+                (completed_takt[0] * 3600 +
+                  completed_takt[1] * 60 +
+                  +completed_takt[2]) /
+                60;
+              if (completed_time > item_takt) {
+                late++;
+              } else {
+                onTime++;
+              }
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // If nothing has flowed, ever; set placeholder of one complete
+  if (onTime == 0 && late == 0 && completed == 0 && defect == 0) {
+    completed = 0.1;
+  }
+
   return {
     datasets: [
       {
-        data: [onTime, stopped, waiting],
-        backgroundColor: ["#10B981", "#DC2626", "#1c64f2"],
+        data: [onTime, late, completed, defect],
+        backgroundColor: ["#10B981", "#DC2626", "#07c1f0", "#FF7605"],
         label: "Takt",
         hoverOffset: 4,
       },
     ],
-    labels: ["On Time", "Stopped", "Waiting"],
+    labels: ["On Time", "Late", "Completed", "Defect"],
     options: {
       responsive: true,
       cutoutPercentage: 10,
@@ -34,47 +113,38 @@ export const piData = (items) => {
   };
 };
 
-export const taktTrackerData = (completedTakts, items, deptIndex) => {
+// TAKT DATA
+export const taktTrackerData = (filter, completedTakts, items, deptIndex) => {
   let partNumber = [];
   let customer = [];
   let projected = [];
   let actual = [];
-  const flow = {
-    0: "Nesting",
-    1: "Laser",
-    2: "PressBrake",
-    3: "SlipRoll",
-    4: "TubeFab",
-    5: "TubeBender",
-    6: "Saw",
-    7: "Mill",
-    8: "Lathe",
-    9: "Welding",
-    10: "RobotWelding",
-    11: "PowderCoating",
-    12: "Hardware",
-    13: "FinalAssembly",
-    14: "Packaging",
-    15: "Shipping",
-  };
   let dept = flow[deptIndex];
+
   completedTakts.map((completedTakt) => {
     items.map((item) => {
       if (completedTakt.id === item.id) {
-        if (completedTakt[flow[deptIndex]] !== "0") {
-          if (item.takt_data[dept] !== 0) {
-            projected.push((item.takt_data[dept] * item.quantity).toFixed(2));
-            partNumber.push(item.part_number);
-            customer.push(item.customer);
+        if (completedTakt[dept] !== "0") {
+          if (
+            moment(completedTakt.timestamp).format("YYYY-MM-DD") <=
+              timeFilter(filter).filterStart &&
+            moment(completedTakt.timestamp).format("YYYY-MM-DD") >=
+              timeFilter(filter).filterEnd
+          ) {
+            if (item.takt_data[dept] !== 0) {
+              projected.push(item.takt_data[dept] * item.quantity);
+              partNumber.push(item.part_number);
+              customer.push(item.customer);
+            }
+            let completed_takt = completedTakt[dept].split(":");
+            let completed_time =
+              (completed_takt[0] * 3600 +
+                completed_takt[1] * 60 +
+                +completed_takt[2]) /
+              60;
+            completed_time = completed_time.toFixed(2);
+            actual.push(completed_time);
           }
-          let completed_takt = completedTakt[flow[deptIndex]].split(":");
-          let completed_time =
-            (completed_takt[0] * 3600 +
-              completed_takt[1] * 60 +
-              +completed_takt[2]) /
-            60;
-          completed_time = completed_time.toFixed(2);
-          actual.push(completed_time);
         }
       }
     });
@@ -91,20 +161,30 @@ export const taktTrackerData = (completedTakts, items, deptIndex) => {
       },
       {
         label: "Projected",
-        fill: false,
-        backgroundColor: "white",
-        borderColor: "black",
+        backgroundColor: "#b92c10",
+        borderColor: "#b92c10",
         data: projected,
+        fill: false,
       },
     ],
   };
 };
-export const defectLogData = (defectData) => {
+
+// DEFECT DATA
+export const defectLogData = (filter, defectData) => {
   let defectArr = [];
   let defectCount = {};
   defectData.map((defect) => {
-    defectArr.push(defect.part_number);
+    if (
+      moment(defect.timestamp).format("YYYY-MM-DD") <=
+        timeFilter(filter).filterStart &&
+      moment(defect.timestamp).format("YYYY-MM-DD") >=
+        timeFilter(filter).filterEnd
+    ) {
+      defectArr.push(defect.part_number);
+    }
   });
+
   defectArr.map((defect) => {
     defectCount[defect] = defectCount[defect] ? defectCount[defect] + 1 : 1;
   });
@@ -120,26 +200,24 @@ export const defectLogData = (defectData) => {
     ],
   };
 };
+
+export const defectCount = (filter, defectData) => {
+  let defectCount = 0;
+  defectData.map((defect) => {
+    if (
+      moment(defect.timestamp).format("YYYY-MM-DD") <=
+        timeFilter(filter).filterStart &&
+      moment(defect.timestamp).format("YYYY-MM-DD") >=
+        timeFilter(filter).filterEnd
+    ) {
+      defectCount++;
+    }
+  });
+  return defectCount;
+};
+
 export const queueData = (items) => {
   let queueTime = 0;
-  const flow = {
-    0: "Nesting",
-    1: "Laser",
-    2: "PressBrake",
-    3: "SlipRoll",
-    4: "TubeFab",
-    5: "TubeBender",
-    6: "Saw",
-    7: "Mill",
-    8: "Lathe",
-    9: "Welding",
-    10: "RobotWelding",
-    11: "PowderCoating",
-    12: "Hardware",
-    13: "Final Assembly",
-    14: "Packaging",
-    15: "Shipping",
-  };
 
   items.forEach((item) => {
     queueTime += item.takt_data[flow[item.current_dept]] * item.quantity;
@@ -186,32 +264,85 @@ export const queueColorGenerator = (percentage) => {
 };
 export const progressLength = (percentage) => {
   if (percentage >= 100) {
-    return "bg-red-500 w-full";
+    return `px-2 bg-red-700 animate-wiggle-light w-full`;
   } else if (percentage >= 90) {
-    return "bg-red-500 w-10/12";
+    return `px-2 bg-gradient-to-r from-red-500 to-red-900 animate-gradient-xy-fast w-[${percentage}%]`;
   } else if (percentage >= 80) {
-    return "bg-red-500 w-9/12";
+    return `px-2 bg-gradient-to-r from-red-500 to-red-600 w-[${percentage}%]`;
   } else if (percentage >= 70) {
-    return "bg-red-500 w-8/12";
+    return `px-2 bg-gradient-to-r from-orange-500 to-red-500 animate-gradient-xy-fast w-[${percentage}%]`;
   } else if (percentage >= 60) {
-    return "bg-red-500 w-7/12";
+    return `px-2 bg-gradient-to-r from-yellow-500 to-orange-500  w-[${percentage}%]`;
   } else if (percentage >= 50) {
-    return "bg-green-500 w-6/12";
+    return `px-2 bg-gradient-to-r from-green-400 to-green-500 animate-gradient-x-fast w-[${percentage}%]`;
   } else if (percentage >= 40) {
-    return "bg-blue-500 w-5/12";
+    return `px-2 bg-blue-500 w-[${percentage}%]`;
   } else if (percentage >= 30) {
-    return "bg-blue-500 w-4/12";
+    return `px-2 bg-blue-500 w-[${percentage}%]`;
   } else if (percentage >= 20) {
-    return "bg-blue-500 w-3/12";
+    return `px-2 bg-blue-500 w-[${percentage}%]`;
   } else if (percentage >= 10) {
-    return "bg-blue-500 w-2/12";
+    return `px-2 bg-blue-500 w-[${percentage}%]`;
   } else if (percentage >= 0) {
-    return "bg-blue-500 w-1/12";
+    return `px-2 bg-blue-500 w-[${percentage}%]`;
   }
+  // future JIT percentage
+  // return `bg-blue-500 w-[${percentage}]`;
 };
 
-export const getOperatorCount = (dept) => {
-  return dept.length * 8;
+export const getOperatorCount = (operators) => {
+  return operators.length * 8;
+};
+
+export const getSchedulerCapacity = (deptId, operatorCount, builds) => {
+  let dept = flow[deptId];
+  let scheduledMins = 0;
+
+  builds.map((build) => {
+    let buildMins = build.takt_data[dept] * build.quantity;
+    if (isNaN(buildMins) == false) {
+      scheduledMins += buildMins;
+    }
+  });
+
+  let deptMinsAvail = operatorCount.length * 8 * 60;
+  let deptCapPerc = (scheduledMins / deptMinsAvail) * 100;
+
+  // console.log(
+  //   dept,
+  //   deptId,
+  //   "-- op count:",
+  //   operatorCount,
+  //   "--Avail Mins:",
+  //   deptMinsAvail,
+  //   "--Sched Mins:",
+  //   scheduledMins
+  // );
+  deptCapPerc = deptCapPerc.toFixed();
+  if (deptCapPerc == "Infinity" || deptCapPerc == "NaN") {
+    deptCapPerc = "N/A";
+  }
+  return deptCapPerc;
+};
+
+export const cartCap = (currentCartCount, totalCartCap) => {
+  let carts = [];
+  let cartsLeft = [];
+  for (let i = 0; i < currentCartCount; i++) {
+    carts.push(<IoCartSharp className="text-black text-3xl" />);
+  }
+  for (let cl = 0; cl < totalCartCap - currentCartCount; cl++) {
+    cartsLeft.push(
+      <IoCartOutline className="text-black opacity-25 text-3xl" />
+    );
+  }
+
+  return (
+    <div className="flex flex-row flex-wrap p-4 bg-gray-200 rounded gap-4">
+      {carts}
+      {cartsLeft}
+    </div>
+  );
 };
 
 // PLUGIN FOR INNER DOUGHNUT TEXT

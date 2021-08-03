@@ -41,7 +41,12 @@ function Header() {
   const whatDept = (currentDept) => {
     let decodedObj = {};
     let cd = currentDept;
-    if (cd == 0) {
+    if (cd == -1) {
+      decodedObj = {
+        decoded_dept: "SCHEDULER",
+        decoded_url: "/app/scheduler",
+      };
+    } else if (cd == 0) {
       decodedObj = {
         decoded_dept: "NESTING",
         decoded_url: "/app/nesting",
@@ -58,25 +63,60 @@ function Header() {
       };
     } else if (cd == 3) {
       decodedObj = {
-        decoded_dept: "MACHINE SHOP",
-        decoded_url: "/app/machineshop",
+        decoded_dept: "TUBE LASER",
+        decoded_url: "/app/tubefab",
       };
     } else if (cd == 4) {
       decodedObj = {
-        decoded_dept: "TUBE FAB",
-        decoded_url: "/app/tubefab",
+        decoded_dept: "TUBE BENDER",
+        decoded_url: "/app/tubebender",
       };
     } else if (cd == 5) {
+      decodedObj = {
+        decoded_dept: "SAW",
+        decoded_url: "/app/saw",
+      };
+    } else if (cd == 6) {
+      decodedObj = {
+        decoded_dept: "MILL",
+        decoded_url: "/app/mill",
+      };
+    } else if (cd == 7) {
+      decodedObj = {
+        decoded_dept: "LATHE",
+        decoded_url: "/app/lathe",
+      };
+    } else if (cd == 8) {
       decodedObj = {
         decoded_dept: "WELDING",
         decoded_url: "/app/welding",
       };
-    } else if (cd == 6) {
+    } else if (cd == 9) {
+      decodedObj = {
+        decoded_dept: "ROBOT WELDING",
+        decoded_url: "/app/roboticwelding",
+      };
+    } else if (cd == 10) {
       decodedObj = {
         decoded_dept: "POWDER",
         decoded_url: "/app/powdercoating",
       };
-    } else if (cd == 7) {
+    } else if (cd == 11) {
+      decodedObj = {
+        decoded_dept: "HARDWARE",
+        decoded_url: "/app/hardware",
+      };
+    } else if (cd == 12) {
+      decodedObj = {
+        decoded_dept: "FINAL ASSEM.",
+        decoded_url: "/app/finalassembly",
+      };
+    } else if (cd == 13) {
+      decodedObj = {
+        decoded_dept: "PACKAGING",
+        decoded_url: "/app/Packaging",
+      };
+    } else if (cd == 14) {
       decodedObj = {
         decoded_dept: "SHIPPING",
         decoded_url: "/app/shipping",
@@ -88,12 +128,14 @@ function Header() {
 
   hopper.map((hop) => {
     let hopDestruct = {
-      label: `${hop.part_number}, ${hop.customer}, ${hop.sales_order} @ ${
+      label: `#${hop.sales_order}, ${hop.customer}, ${hop.part_number} is at ${
         whatDept(hop.current_dept).decoded_dept
       }`,
       value: `${whatDept(hop.current_dept).decoded_url}`,
     };
-    hopArray.push(hopDestruct);
+    if (hop.current_dept !== 100) {
+      hopArray.push(hopDestruct);
+    }
   });
   const [searchSelected, setSearchSelected] = useState();
   const onchange = (searchSelected) => {
@@ -120,7 +162,7 @@ function Header() {
               <SearchIcon className="w-4 h-4" aria-hidden="true" />
             </div>
             <Select
-              className="text-xs "
+              className="text-md font-semibold "
               placeholder="Search Build Orders, Product Numbers..."
               options={hopArray}
               value={searchSelected}

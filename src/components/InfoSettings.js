@@ -14,6 +14,7 @@ import {
   faDumpsterFire,
   faQuestionCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import { StatusColor } from "../utils";
 import { BuildOrderPartFlow, PartFlow } from "../utils/partflow";
 import { HopperContext } from "../context/HopperContext";
 import "react-toastify/dist/ReactToastify.css";
@@ -28,11 +29,13 @@ export const InfoSettings = ({ build }) => {
     red: "Behind",
     green: "On Time",
     orange: "Defect",
+    hot: "HOT 🔥",
+    recut: "Recut",
   };
   return (
     <>
       <button
-        className="flex flex-row justify-center align-center items-center p-2 w-8/12 bg-gray-200 hover:bg-gray-300 shadow hover:shadow-inner rounded mb-2"
+        className="flex flex-row justify-center align-center items-center p-2 w-8/12 bg-gray-200 hover:bg-gray-300 shadow hover:shadow-inner rounded "
         onClick={() => {
           setInfoModalOpen(true);
         }}
@@ -80,10 +83,12 @@ export const InfoSettings = ({ build }) => {
               Current Cell:
               <span className="font-normal ml-2">{build.current_cell}</span>
             </h2>
-            <h2 className="text-xl font-semibold border-b-2 w-full">
+            <h2 className="text-xl font-semibold border-b-2 w-full mb-2">
               Current Status:
               <span
-                className={`p-1 font-bold uppercase text-lg text-${build.takt_status}-500`}
+                className={`px-3 mx-2 font-bold uppercase text-lg text-white ${
+                  StatusColor(build.takt_status).light
+                } rounded`}
               >
                 {taktStatus[build.takt_status]}
               </span>

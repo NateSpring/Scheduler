@@ -8,6 +8,8 @@ import {
 import AccessibleNavigationAnnouncer from "./components/AccessibleNavigationAnnouncer";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "react-tabs/style/react-tabs.css";
+import "react-datepicker/dist/react-datepicker.css";
 
 const Layout = lazy(() => import("./containers/Layout"));
 const Login = lazy(() => import("./pages/Login"));
@@ -19,7 +21,7 @@ function App() {
     <>
       <Router>
         <AccessibleNavigationAnnouncer />
-        <ToastContainer autoClose={3000} pauseOnHover draggable closeOnClick />
+        <ToastContainer autoClose={4500} pauseOnHover draggable closeOnClick />
 
         <Switch>
           <Route path="/login" component={Login} />
@@ -29,7 +31,8 @@ function App() {
           {/* Place new routes over this */}
           <Route path="/app" component={Layout} />
           {/* If you have an index page, you can remothis Redirect */}
-          <Redirect exact from="/" to="/login" />
+          {/* <Redirect exact from="/" to="/login" /> */}
+          <Redirect exact from="/" to="/app/dashboard" />
         </Switch>
       </Router>
     </>

@@ -77,60 +77,74 @@ const HopperProvider = (props) => {
     // Init current hopper for this department.
     const getHopper = async () => {
       let hopParse = [];
+      let sortedHop;
       let currentHopper = [];
       const hopRes = await axios.get(`http://192.168.55.26:5000/hopper`);
       const completedTakt = await axios.get(
         `http://192.168.55.26:5000/completed_takt_time`
       );
       const defects = await axios.get(`http://192.168.55.26:5000/defect_log`);
-      hopRes.data.map((hop) => {
-        hop.part_data = JSON.parse(hop.part_data);
-        // Map takt times from here 26a
-        let taktTime = hop.part_data;
-        hop.takt_data = {
-          Laser: parseFloat(taktTime[2]),
-          PressBrake: parseFloat(taktTime[9]) + parseFloat(taktTime[11]),
-          TubeFab: parseFloat(taktTime[31]) + parseFloat(taktTime[37]),
-          TubeBender: parseFloat(taktTime[39]) + parseFloat(taktTime[42]),
-          Saw:
-            parseFloat(taktTime[14]) == 0
-              ? parseFloat(taktTime[18]) + parseFloat(taktTime[15])
-              : parseFloat(taktTime[18]) +
-                parseFloat(taktTime[15]) * parseFloat(taktTime[14]),
-          Lathe: parseFloat(taktTime[20]) + parseFloat(taktTime[22]),
-          Mill: parseFloat(taktTime[28]) + parseFloat(taktTime[30]),
-          Welding: parseFloat(taktTime[47]) + parseFloat(taktTime[48]),
-          RoboticWelding: parseFloat(taktTime[51]) + parseFloat(taktTime[52]),
-          PowderCoating: parseFloat(taktTime[52]),
-          Hardware: parseFloat(taktTime[59]),
-          FinalAssembly: parseFloat(taktTime[62]) + parseFloat(taktTime[63]),
-          //falsy for packaging
-          Packaging: 10.1,
-          Shipping: parseFloat(taktTime[66]),
-          ShippingFull: {
-            rbo_b2: parseFloat(taktTime[66]),
-            itd_b2: parseFloat(taktTime[67]),
-            ffp_b2: parseFloat(taktTime[68]),
-            itd_b1: parseFloat(taktTime[69]),
-            rbo_b1: parseFloat(taktTime[70]),
-            ffp_b1: parseFloat(taktTime[71]),
-          },
-        };
-        // 'Tak' on completed takt.
-        completedTakt.data.map((ct) => {
-          if (ct.id == hop.id) {
-            hop.completed_takt = ct;
-          }
-        });
-        setDefectLog(defects.data);
+      if (hopRes.data.length > 0) {
+        hopRes.data.map((hop) => {
+          hop.part_data = JSON.parse(hop.part_data);
+          // Map takt times from here 26a
+          let taktTime = hop.part_data;
+          hop.takt_data = {
+            Laser: parseFloat(taktTime[2]),
+            PressBrake: parseFloat(taktTime[9]) + parseFloat(taktTime[11]),
+            TubeFab: parseFloat(taktTime[31]) + parseFloat(taktTime[37]),
+            TubeBender: parseFloat(taktTime[39]) + parseFloat(taktTime[42]),
+            Saw:
+              parseFloat(taktTime[14]) == 0
+                ? parseFloat(taktTime[18]) + parseFloat(taktTime[15])
+                : parseFloat(taktTime[18]) +
+                  parseFloat(taktTime[15]) * parseFloat(taktTime[14]),
+            Lathe: parseFloat(taktTime[20]) + parseFloat(taktTime[22]),
+            Mill: parseFloat(taktTime[28]) + parseFloat(taktTime[30]),
+            Welding: parseFloat(taktTime[47]) + parseFloat(taktTime[48]),
+            RoboticWelding: parseFloat(taktTime[51]) + parseFloat(taktTime[52]),
+            PowderCoating: parseFloat(taktTime[52]),
+            Hardware: parseFloat(taktTime[59]),
+            FinalAssembly: parseFloat(taktTime[62]) + parseFloat(taktTime[63]),
+            //falsy for packaging
+            Packaging: 10.1,
+            Shipping: parseFloat(taktTime[66]),
+            ShippingFull: {
+              rbo_b2: parseFloat(taktTime[66]),
+              itd_b2: parseFloat(taktTime[67]),
+              ffp_b2: parseFloat(taktTime[68]),
+              itd_b1: parseFloat(taktTime[69]),
+              rbo_b1: parseFloat(taktTime[70]),
+              ffp_b1: parseFloat(taktTime[71]),
+            },
+          };
+          // 'Tak' on completed takt.
+          completedTakt.data.map((ct) => {
+            if (ct.id == hop.id) {
+              hop.completed_takt = ct;
+            }
+          });
+          setDefectLog(defects.data);
 
-        if (hop.current_cell === 0) {
-          currentHopper.push(hop);
-        }
-        hopParse.push(hop);
-      });
-      /*currentHopper.length > 0 ? setEmptyHopper(false) : setEmptyHopper(true);*/
-      setHopper(hopParse);
+          if (hop.current_cell === 0) {
+            currentHopper.push(hop);
+          }
+          hopParse.push(hop);
+          // Sort by status -> grouped sales_order (ascending top down) -> OG SQL Timestamp
+          sortedHop = hopParse.sort((a, b) =>
+            b.takt_status > a.takt_status
+              ? 1
+              : b.takt_status === a.takt_status
+              ? b.sales_order > a.sales_order
+                ? 1
+                : -1
+              : -1
+          );
+        });
+
+        /*currentHopper.length > 0 ? setEmptyHopper(false) : setEmptyHopper(true);*/
+        setHopper(sortedHop);
+      }
     };
     getHopper();
   }, [buildOrder]);

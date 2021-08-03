@@ -27,6 +27,7 @@ const Hardware = lazy(() => import("../pages/Hardware"));
 const FinalAssembly = lazy(() => import("../pages/FinalAssembly"));
 const Packaging = lazy(() => import("../pages/Packaging"));
 const Shipping = lazy(() => import("../pages/Shipping"));
+const Production = lazy(() => import("../pages/Production"));
 ////////////////////////////////////////////////////////////////
 /**
  * ⚠ These are internal routes!
@@ -106,6 +107,7 @@ const routes = [
     path: "/shipping",
     component: Shipping,
   },
+  { path: "/production", component: Production },
   {
     path: "/cards",
     component: Cards,

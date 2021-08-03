@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import PageTitle from "../components/Typography/PageTitle";
-import { sendToCell, TaktStatusIndicator } from "../utils";
+import { sendToCell, StatusIndicator } from "../utils";
 import axios from "axios";
 import {
   TableBody,
@@ -289,7 +289,7 @@ function MachineShop() {
                                 </select>
                               </TableCell>
                               <TableCell>
-                                {TaktStatusIndicator(parts.takt_status)}
+                                {StatusIndicator(parts.takt_status)}
                               </TableCell>
                               <TableCell>
                                 <span className="text-sm">

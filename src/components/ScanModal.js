@@ -17,6 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
 export const ScanModal = ({ scanDept }) => {
   const { hopper, setHopper, cells, setCells } = useContext(HopperContext);
   const [timer, setTimer] = useState();
+  const [taktIntervalId, setTaktIntervalId] = useState();
   const [startTime, setStartTime] = useState();
   const [timerStatus, setTimerStatus] = useState();
   const [taktStatus, setTaktStatus] = useState([]);
@@ -26,6 +27,8 @@ export const ScanModal = ({ scanDept }) => {
   const [qrScanOut, setQrScanOut] = useState("");
   const [dejaVuWindow, setDejaVuWindow] = useState(false);
   const [dejaVu, setDejaVu] = useState(false);
+  var taktInterval;
+
   const dept_flow = {
     0: "Nesting",
     1: "Laser",
@@ -42,6 +45,7 @@ export const ScanModal = ({ scanDept }) => {
     12: "Final Assembly",
     13: "Packaging",
     14: "Shipping",
+    100: "Product Finished!",
   };
 
   const status = {
@@ -90,7 +94,6 @@ export const ScanModal = ({ scanDept }) => {
     //   .then(async (res) => {
     //     let curDept = res.data[0].current_dept;
     //     if (curDept === scanDept) {
-
     hopper.map(async (item) => {
       if (item.id === buildOrderId) {
         item.part_data.slice(78, 93).map((dept, i) => {
@@ -110,42 +113,69 @@ export const ScanModal = ({ scanDept }) => {
       })
       .then((res) => {
         console.log("Scan In Successful", res.data);
+
         hopper.map(async (hop) => {
           if (hop.id === qrOutput) {
-            await axios
-              .get(
-                `/localfolder?part=${hop.part_number}&desc=${hop.part_data[1]}&dept=${hop.current_dept}`
-                // THIS WILL OPEN THE SPECIFIC PDF->>>>>
-                // NEED FOLDER NAME FORMATTING -- REMOVE SPACES FOR CONSISTENCY
-                // &dept=${whatDept(hop.current_dept)}`
-              )
-              .then((response) => {
-                if (hop.current_dept === 1) {
-                  // if (response.data.pdfData) {
-                  //   hop.cutList = formatCutList(response.data.pdfData);
-                  //   let cutList = formatCutList(response.data.pdfData);
-                  //   setHopper(
-                  //     hopper.map((item) =>
-                  //       item.id === qrOutput
-                  //         ? { ...item, cutList: cutList }
-                  //         : item
-                  //     )
-                  //   );
-                  // }
-                  noTimer(hop);
-                } else if (hop.current_dept === 0) {
-                  /* Omit this if you want the nesting scan window to stay open until you're actually done.
+            // await axios
+            //   .get(
+            //     `/localfolder?part=${hop.part_number}&desc=${hop.part_data[1]}&dept=${hop.current_dept}`
+            //     // THIS WILL OPEN THE SPECIFIC PDF->>>>>
+            //     // NEED FOLDER NAME FORMATTING -- REMOVE SPACES FOR CONSISTENCY
+            //     // &dept=${whatDept(hop.current_dept)}`
+            //   )
+            //   .then((response) => {
+            if (hop.current_dept === 1) {
+              // if (response.data.pdfData) {
+              //   hop.cutList = formatCutList(response.data.pdfData);
+              //   let cutList = formatCutList(response.data.pdfData);
+              //   setHopper(
+              //     hopper.map((item) =>
+              //       item.id === qrOutput
+              //         ? { ...item, cutList: cutList }
+              //         : item
+              //     )
+              //   );
+              // }
+              noTimer(hop);
+            } else if (hop.current_dept === 100) {
+              console.log("Already in Vault!");
+            } else if (hop.current_dept === 0) {
+              /* Omit this if you want the nesting scan window to stay open until you're actually done.
                       Super handy for bulk scanning build orders. */
-                  // setScanModalOpen(false);
-                  noTimer(hop);
+              // setScanModalOpen(false);
+              noTimer(hop);
+            } else {
+              /////// Open Folder
+              if (
+                window &&
+                window.process &&
+                window.process.type == "renderer"
+              ) {
+                if (
+                  hop.part_number == "AP1" ||
+                  hop.part_number == "AP2" ||
+                  hop.part_number == "AP3" ||
+                  hop.part_number == "AP4" ||
+                  hop.part_number == "AP5"
+                ) {
+                  window.openfile(
+                    hop.part_number,
+                    hop.part_data[1],
+                    hop.current_dept
+                  );
                 } else {
-                  taktTimer(hop);
+                  window.open(hop.part_number, hop.part_data[1]);
                 }
-              })
-              .catch((err) => {
-                console.log("Catching err from pdf opener: ", err);
-                toast.error(ToastErr(buildOrderId, err.message));
-              });
+              } else {
+                console.log("Cannot open local folder from browser");
+              }
+              taktTimer(hop);
+            }
+            // })
+            // .catch((err) => {
+            //   console.log("Catching err from pdf opener: ", err);
+            //   toast.error(ToastErr(buildOrderId, err.message));
+            // });
           }
         });
         toast.success(ToastMsg(buildOrderId));
@@ -206,6 +236,18 @@ export const ScanModal = ({ scanDept }) => {
           }
         });
 
+        let taktStatus = item.takt_status;
+        if (item.takt_status == "hot") {
+          taktStatus = "hot";
+        } else if (item.takt_status == "recut") {
+          taktStatus = "recut";
+        } else {
+          taktStatus = "blue";
+        }
+        // If the current dept is shipping, next dept is the vault (100)
+        if (item.current_dept == 14) {
+          nextDept = 100;
+        }
         axios
           .post("http://192.168.55.26:5000/scan", {
             qrCode: buildOrderId,
@@ -214,6 +256,7 @@ export const ScanModal = ({ scanDept }) => {
             current_dept: item.current_dept,
             sales_order: item.sales_order,
             part_number: item.part_number,
+            takt_status: taktStatus,
             qty: item.quantity,
             nextDept: nextDept,
           })
@@ -232,6 +275,8 @@ export const ScanModal = ({ scanDept }) => {
           });
       }
     });
+    // Clear timer on scanout
+    clearInterval(taktIntervalId);
   };
 
   useEffect(() => {
@@ -251,6 +296,7 @@ export const ScanModal = ({ scanDept }) => {
   }, [timerStatus]);
 
   ///////////////// Timer Function/////////////////////
+
   const taktTimer = (build) => {
     let partData = build.takt_data;
     //determine takt times from dept in here
@@ -278,7 +324,6 @@ export const ScanModal = ({ scanDept }) => {
     let splitTakt = thisTakt.toString().split(".");
     let thisTaktMin = parseInt(splitTakt[0], 10) * 60 * 1000;
     let thisTaktSec = parseInt(splitTakt[1], 10) * 1000;
-
     console.log(
       `split:${splitTakt}, TaktMin: ${thisTaktMin}, TaktSec: ${thisTaktSec}`
     );
@@ -303,16 +348,17 @@ export const ScanModal = ({ scanDept }) => {
     });
     // Uncomment for takt time test.
     // thisTakt = 2000;
-    const taktInterval = setInterval(() => {
+
+    taktInterval = setInterval(() => {
       let thisTaktConvertSeconds = thisTakt / 1000;
       thisTaktConvertSeconds--;
       thisTakt = thisTaktConvertSeconds * 1000;
 
       setTimer({ uid: build.id, ms: thisTakt, time: msToHMS(thisTakt) });
-
       if (thisTakt < 0) {
         setTimerStatus(status.behind);
       }
+      setTaktIntervalId(taktInterval);
     }, 1000);
   };
 
@@ -360,10 +406,25 @@ export const ScanModal = ({ scanDept }) => {
     });
   };
 
+  const getFilePath = (id) => {
+    let path;
+    hopper.map((hop) => {
+      if (hop.id == id) {
+        let part = hop.part_number;
+        let desc = hop.part_data[1];
+        let partsLibrary = part + " " + desc;
+        partsLibrary = partsLibrary.replace(/\s+/g, "-");
+        console.log(`\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}`);
+        path = `\\\\ig\\Inventive\\Parts-Library\\${partsLibrary}`;
+      }
+    });
+    return path;
+  };
+
   return (
     <>
       <button
-        className="p-2 m-2 h-12 flex items-center justify-center bg-green-400 dark:bg-green-600 dark:hover:bg-green-900 hover:bg-green-500 rounded shadow-lg"
+        className="p-2 h-12 flex items-center justify-center bg-green-400 dark:bg-green-600 dark:hover:bg-green-900 hover:bg-green-500 rounded hover:shadow-none shadow-xl"
         onClick={() => {
           setScanModalOpen(true);
         }}
@@ -458,6 +519,10 @@ export const ScanModal = ({ scanDept }) => {
               <p className="font-semibold text-lg">Build Order ID:</p>
               <div className={`pb-4 font-semibold text-${timerStatus}-500`}>
                 {isModalOpen.mid}
+                {/* <p>File Path:</p>
+                <a href={`${getFilePath(isModalOpen.mid)}`}>
+                  Open Parts Library
+                </a> */}
               </div>
 
               {/* <div className="flex flex-row justify-center w-full bg-green-400 p-4 rounded text-xl text-center">

@@ -137,7 +137,7 @@ app.get("/nm", (req, res) => {
 
 //Exclusive Scheduler endpoint for creating build order
 app.post("/create_build", (req, res) => {
-  console.log(req.body);
+  console.log("Creating Build Order!", req.body);
   let part_data_query = `SELECT item from takt_time WHERE part_number='${req.body.part}'`;
   con.query(part_data_query, (error, result) => {
     try {
@@ -151,6 +151,11 @@ app.post("/create_build", (req, res) => {
           io.sockets.emit("dept status change", {
             id: req.body.qrCode,
             message: `Inserting ${req.body.qrCode} to Nesting...`,
+          });
+        } else {
+          res.send({
+            status: "error",
+            message: `Build Card: Already In Use.`,
           });
         }
       });
@@ -190,10 +195,15 @@ app.post("/reset", (req, res) => {
 ////////////////////////////////////////////////////////
 
 // LOG TAKT TIME
-const logTaktTime = (id, sales_order, part_number, qty, time, currentDept) => {
-  console.log(
-    `\x1b[35m Logged Takt Time for ${id} on scan out:  ${time} at ${currentDept} \x1b[0m`
-  );
+const logTaktTime = (
+  id,
+  sales_order,
+  part_number,
+  qty,
+  taktstatus,
+  time,
+  currentDept
+) => {
   const flow = {
     0: "Nesting",
     1: "Laser",
@@ -211,6 +221,9 @@ const logTaktTime = (id, sales_order, part_number, qty, time, currentDept) => {
     13: "Packaging",
     14: "Shipping",
   };
+  console.log(
+    `\x1b[35m Logged Takt Time for ${id} on scan out:  ${time} at ${flow[currentDept]} \x1b[0m`
+  );
   let dept = flow[currentDept];
   con.query(
     `INSERT INTO completed_takt_time (id, sales_order, part_number, qty, ${dept}) VALUES ('${id}', ${sales_order},'${part_number}', ${qty}, '${time}') ON DUPLICATE KEY UPDATE ${dept}='${time}', timestamp=CURRENT_TIMESTAMP`,
@@ -237,11 +250,12 @@ app.post("/scan", (req, res) => {
       req.body.sales_order,
       req.body.part_number,
       req.body.qty,
+      req.body.takt_status,
       req.body.taktTime,
       req.body.current_dept
     );
   }
-  let update_dept = `UPDATE hopper SET current_dept=${req.body.nextDept}, timer_start=0, current_cell='hopper', takt_status='blue' WHERE id='${req.body.qrCode}'`;
+  let update_dept = `UPDATE hopper SET current_dept=${req.body.nextDept}, timer_start=0, current_cell='hopper', takt_status='${req.body.takt_status}' WHERE id='${req.body.qrCode}'`;
   ///////////////////////////// deprecated with comma delimited flow
   // let send_to_laser = `UPDATE hopper SET current_dept=1, timer_start=0, current_cell='hopper', takt_status='blue' WHERE id='${req.body.qrCode}'`;
   let update_timer = `UPDATE hopper SET timer_start=1 WHERE id='${req.body.qrCode}'`;
@@ -333,15 +347,12 @@ app.post("/timer_reset", (req, res) => {
 
 // Get logged takt time from completed_takt_time db
 app.get("/completed_takt_time", (req, res) => {
-  con.query(
-    "SELECT * from completed_takt_time WHERE DATE(`timestamp`) = CURDATE()",
-    (error, result) => {
-      if (!error) {
-        // console.log(result);
-        res.send(result);
-      }
+  con.query("SELECT * from completed_takt_time", (error, result) => {
+    if (!error) {
+      // console.log(result);
+      res.send(result);
     }
-  );
+  });
 });
 
 // Get part info
@@ -388,8 +399,58 @@ app.post("/create_defect", (req, res) => {
 
 // Get Defect Log
 app.get("/defect_log", (req, res) => {
+  con.query("SELECT * from defect_log", (error, result) => {
+    if (!error) {
+      // console.log(result);
+      res.send(result);
+    }
+  });
+});
+
+//Create Recut Card
+app.post("/recut", (req, res) => {
+  let recut = `UPDATE hopper SET current_dept=-1, timer_start=1, current_cell='hopper', takt_status='recut' WHERE id='${req.body.qrCode}'`;
+  con.query(recut, (error, result) => {
+    if (!error) {
+      console.log(`\x1b[31m RECUT:  ${req.body.qrCode} \x1b[0m`);
+      io.sockets.emit("dept status change", {
+        id: req.body.qrCode,
+        message: `Recut Card Made: ${req.body.qrCode}.`,
+      });
+    }
+  });
+});
+
+//Create Recut Card
+app.post("/recutlist", (req, res) => {
+  console.log(req.body);
+  let recutlist = `INSERT INTO recuts (id, sales_order, part_number, scrapped_parts, init_scrapped_parts) VALUES ('${
+    req.body.id
+  }', '${req.body.sales_order}', '${req.body.part_number}', '${JSON.stringify(
+    req.body.scrapped_parts
+  )}','${JSON.stringify(
+    req.body.scrapped_parts
+  )}') ON DUPLICATE KEY UPDATE scrapped_parts='${JSON.stringify(
+    req.body.scrapped_parts
+  )}'`;
+  con.query(recutlist, (error, result) => {
+    if (!error) {
+      console.log(`\x1b[31m RECUT:  ${req.body.id} \x1b[0m`);
+      io.sockets.emit("dept status change", {
+        id: req.body.id,
+        message: `Recut Card Made: ${req.body.id}.`,
+      });
+    } else {
+      console.log(error);
+    }
+  });
+  res.sendStatus(200);
+});
+
+//Get Recut Card
+app.post("/getrecutlist", (req, res) => {
   con.query(
-    "SELECT * from defect_log WHERE DATE(`timestamp`) = CURDATE()",
+    `SELECT * from recuts WHERE id='${req.body.id}'`,
     (error, result) => {
       if (!error) {
         // console.log(result);
@@ -397,6 +458,20 @@ app.get("/defect_log", (req, res) => {
       }
     }
   );
+});
+
+// Update takt status/digital andon color
+app.post("/taktstatus", (req, res) => {
+  let statusUpdate = `UPDATE hopper SET takt_status='${req.body.takt_status}' WHERE id='${req.body.id}'`;
+  con.query(statusUpdate, async (error, result) => {
+    if (!error) {
+      io.sockets.emit("dept status change", {
+        id: req.body.id,
+        dept: "",
+        message: `Takt Status updated for ${req.body.id} to ${req.body.takt_status}`,
+      });
+    }
+  });
 });
 
 // Get flow with part number from flow sql table
@@ -455,6 +530,59 @@ app.get("/testlcl", (req, res) => {
     }
   });
 });
+
+//Open BOM to generate scraped parts
+// Open local procedures
+app.post("/bomreader", (req, res) => {
+  let part = req.body.part;
+  let dirPath = "\\\\ig\\Inventive\\MFG-Data\\SNDATA\\BOM\\";
+  let fileArray = [];
+  let subPartsArray = [];
+  fs.readdir(dirPath, (err, files) => {
+    if (err) {
+      console.log("cant read bom directory");
+    }
+    files.forEach((file, i) => {
+      if (file.includes(part)) {
+        fileArray.push(file);
+
+        if (fileArray.length > 1) {
+          console.log(`multiple files found: ${file}`);
+        } else {
+          console.log("BOM FOUND: ", dirPath + file);
+
+          fs.readFile(dirPath + file, "utf8", (err, data) => {
+            if (err) {
+              console.log(`Error reading ${part} file`);
+            }
+            let bomLines = data.split("\n");
+            bomLines.forEach((li) => {
+              if (li.includes("BOM")) {
+                return;
+              }
+              let stripli = li.replace(
+                "\\\\ig\\Inventive\\MFG-Data\\SNDATA\\PARTS\\",
+                ""
+              );
+              stripli = stripli.slice(0, -3);
+              let subPart = stripli
+                .split(",")[0]
+                .replace(".prs", "")
+                .replace(".PRS", "");
+              let subPartQuantity = stripli.split(",")[1];
+              let subPartObj = { part: subPart, quan: subPartQuantity };
+              subPartsArray.push(subPartObj);
+            });
+            console.log(subPartsArray);
+
+            res.status(200).send(subPartsArray);
+          });
+        }
+      }
+    });
+  });
+});
+
 // Open local procedures
 app.get("/localfolder", (req, res) => {
   let part = req.query.part;
@@ -596,18 +724,16 @@ app.get("/get_operator_dept", (req, res) => {
 
 // Update takt status/digital andon color
 app.post("/taktstatus", (req, res) => {
-  con.query(
-    `UPDATE hopper SET takt_status='${req.body.takt_status}' WHERE id='${req.body.id}'`,
-    async (error, result) => {
-      if (!error) {
-        io.sockets.emit("dept status change", {
-          id: req.body.id,
-          dept: "",
-          message: `Takt Status updated for ${req.body.id} to ${req.body.takt_status}`,
-        });
-      }
+  let statusUpdate = `UPDATE hopper SET takt_status='${req.body.takt_status}' WHERE id='${req.body.id}'`;
+  con.query(statusUpdate, async (error, result) => {
+    if (!error) {
+      io.sockets.emit("dept status change", {
+        id: req.body.id,
+        dept: "",
+        message: `Takt Status updated for ${req.body.id} to ${req.body.takt_status}`,
+      });
     }
-  );
+  });
 });
 
 server.listen(port, () => console.log(`Server Ready on Port: ${port}`));
