@@ -8,10 +8,12 @@
 An interal production, defect, time tracking software.
 
 ### Built With
-Frontend: React
-Backend: Node/Express 
-Desktop: Electron
-Database: MySQL
+<ul>
+<li>Frontend: React</li>
+<li>Backend: Node/Express </li>
+<li>Desktop: Electron</li>
+<li>Database: MySQL</li>
+  </ul>
 
 ![Scheduler Example](scheduler-example.png)
 ![Scheduler Example Timer](scheduler-example-timer.png)
